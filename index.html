@@ -6136,6 +6136,11 @@ function loop(t){
   drawTouchButtons(CTX);              // 触摸技能按钮
   Input.endFrame();
   if(game.state===State.PLAY && _lastGameState!==State.PLAY) showTouchTutorial();
+  // PLAY 状态隐藏底部说明文字（避免和 HUD chips 重叠/重复），其他状态显示
+  if(game.state!==_lastGameState){
+    const hintEl=document.getElementById('hint');
+    if(hintEl) hintEl.style.display = (game.state===State.PLAY) ? 'none' : '';
+  }
   _lastGameState=game.state;
   // FPS 统计
   fpsCount++; fpsTime+=dt; if(fpsTime>=0.5){ fps=Math.round(fpsCount/fpsTime); fpsCount=0; fpsTime=0; }
