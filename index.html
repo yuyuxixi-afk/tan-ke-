@@ -6153,8 +6153,9 @@ function fitCanvas(){
   const vw = window.innerWidth, vh = window.innerHeight;
   const portrait = vh > vw;
   if(isMobile){
-    // 移动端：等比缩放铺满较短边（不变形）
-    const s = Math.min(vw/W, vh/H, 2.5);
+    // 移动端：等比缩放铺满较短边（不变形），预留浏览器顶栏/底栏空间
+    const safeVh = vh * 0.90;
+    const s = Math.min(vw/W, safeVh/H, 2.5);
     CANVAS.style.width=(W*s)+'px'; CANVAS.style.height=(H*s)+'px';
   } else {
     // PC：等比缩放留边距
