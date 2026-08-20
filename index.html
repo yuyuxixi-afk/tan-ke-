@@ -295,7 +295,7 @@ const Input = (()=>{
     {key:'r', label:'维修', x:0.95, y:0.55, col:'#ff4655'},
   ];
   // 移动端开火按钮（右下角大按钮，按住即开火）
-  const FIRE_BTN = { x:0.50, y:0.82, r:0.065 };
+  const FIRE_BTN = { x:0.80, y:0.75, r:0.045 };
   function hitSkillBtn(sx, sy, r){
     for(const b of SKILL_BTNS){
       const bx=b.x*r.width, by=b.y*r.height, br=0.030*r.width;
@@ -6116,12 +6116,13 @@ let _lastGameState=null;
 function showTouchTutorial(){
   if(!Input.touch.isTouch) return;
   if(document.getElementById('touchTutorial')) return;
+  window.tutorialPaused = true;                    // 暂停游戏，等用户看完
   const d=document.createElement('div'); d.id='touchTutorial';
   d.style.cssText='position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(5,7,13,0.93);border:1px solid rgba(34,224,255,0.45);border-radius:14px;color:#cfe8ff;font-size:14px;z-index:9999;padding:22px 26px;font-family:sans-serif;text-align:center;line-height:2.1;max-width:92vw;box-shadow:0 8px 40px rgba(0,0,0,0.6)';
-  d.innerHTML='<b style="font-size:16px;color:#22e0ff">📱 触摸操作教程</b><br><span style="color:#22e0ff">●</span> 左下角摇杆 = <b style="color:#22e0ff">移动</b>（手柄限制在圆圈内）<br><span style="color:#ff4655">●</span> 中下按钮 = <b style="color:#ff4655">开火</b>（按住即发射）<br><span style="color:#ff3d8b">●</span> 右下角摇杆 = <b style="color:#ff3d8b">手动瞄准</b>（可选，松手恢复自动）<br><span style="color:#a06bff">●</span> 右侧小按钮 = <b style="color:#a06bff">技能</b>（换武/换型/雷暴/护盾/背包/维修）<br><span style="color:#5f83b8;font-size:12px">15秒后自动消失，或点击关闭</span>';
-  d.onclick=()=>d.remove();
+  d.innerHTML='<b style="font-size:16px;color:#22e0ff">📱 触摸操作教程</b><br><span style="color:#22e0ff">●</span> 左下角摇杆 = <b style="color:#22e0ff">移动</b>（手柄限制在圆圈内）<br><span style="color:#ff4655">●</span> 右下角摇杆中心 = <b style="color:#ff4655">开火</b>（按住即发射）<br><span style="color:#ff3d8b">●</span> 右下角摇杆 = <b style="color:#ff3d8b">手动瞄准</b>（拖动外围，松手恢复自动）<br><span style="color:#a06bff">●</span> 右侧小按钮 = <b style="color:#a06bff">技能</b>（换武/换型/雷暴/护盾/背包/维修）<br><span style="color:#5f83b8;font-size:13px">👉 点击此处关闭，游戏开始</span>';
+  d.onclick=()=>{ d.remove(); window.tutorialPaused=false; };
   document.body.appendChild(d);
-  setTimeout(()=>{ const x=document.getElementById('touchTutorial'); if(x) x.remove(); }, 15000);
+  setTimeout(()=>{ const x=document.getElementById('touchTutorial'); if(x){ x.remove(); } window.tutorialPaused=false; }, 15000);
 }
 
 function loop(t){
@@ -6129,7 +6130,7 @@ function loop(t){
   let dt=(t-last)/1000; last=t;
   if(dt>0.05) dt=0.05;                 // 钳制，避免切后台后大跳
   game.menuAnim+=dt;
-  game.update(dt);
+  if(!window.tutorialPaused) game.update(dt);
   game.render(CTX);
   drawTouchSticks(CTX);                // 触摸摇杆叠加层
   drawTouchButtons(CTX);              // 触摸技能按钮
