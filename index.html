@@ -320,6 +320,13 @@ const Input = (()=>{
         if(typeof game.handleClick==='function') game.handleClick();
         return;
       }
+      // 游戏中：暂停按钮优先（右上角）
+      if(game.pauseHot){
+        const kx=CANVAS.width/r.width, ky=CANVAS.height/r.height;
+        const mx=sx*kx, my=sy*ky;
+        const b=game.pauseHot;
+        if(mx>b.x&&mx<b.x+b.w&&my>b.y&&my<b.y+b.h){ game.state=State.PAUSE; Audio.stopBgm(); return; }
+      }
       // 游戏中：技能按钮优先（一次性触发，不持续按住）
       const btn = hitSkillBtn(sx, sy, r);
       if(btn){ once[btn.key]=true; return; }
@@ -5131,7 +5138,16 @@ class Game {
     // ⚙ 武器 / 型号 / EMP 三个切换项已统一移到屏幕最下方的技能条里（和 E/R/F/G/C 一起），
     //   顶部只保留波次 / 击杀 / BOSS 提醒，避免玩家一会儿看上面一会儿看下面来不及切换。
     // 作者署名（HUD 常驻，身份标识之一）
-    g.textAlign='right'; g.fillStyle='rgba(34,224,255,0.55)'; g.font='10px "Segoe UI"'; g.fillText('QYX · 校园坦克大战', W-16, 18);
+    // 右上角暂停按钮（醒目，手机/电脑都能点）
+    {
+      const pw=92, ph=28, px=W-pw-12, py=4;
+      this.pauseHot={x:px,y:py,w:pw,h:ph};
+      g.fillStyle='rgba(255,70,85,0.18)'; this.roundRectFill(g,px,py,pw,ph,8);
+      g.strokeStyle='rgba(255,70,85,0.7)'; g.lineWidth=1.4; g.shadowBlur=6; g.shadowColor='rgba(255,70,85,0.5)';
+      this.roundRectStroke(g,px,py,pw,ph,8); g.shadowBlur=0;
+      g.fillStyle='#ff6a78'; g.font='bold 14px "Microsoft YaHei"'; g.textAlign='center'; g.textBaseline='middle';
+      g.fillText('⏸ 暂停', px+pw/2, py+ph/2+1);
+    }
 
     // ===== 底部统一操作条：部件状态 + 【武器/型号/EMP 切换】 + 技能冷却，全部集中在最下方 =====
     //   用户要求所有“切换/技能”按键都放到底部一排，方便边打边看边切，不用上下来回看。
@@ -5995,7 +6011,15 @@ class Game {
 /* ======================= 主循环（FPS 控制 + dt 钳制） ======================= */
 const game=new Game();
 
-CANVAS.addEventListener('mousedown',()=>{ Audio.resume(); if([State.MENU,State.SCENE,State.BRIEF,State.OVER,State.WIN,State.PAUSE].includes(game.state)) game.handleClick(); });
+CANVAS.addEventListener('mousedown',(e)=>{ Audio.resume();
+  // PLAY 状态：优先检测暂停按钮点击
+  if(game.state===State.PLAY && game.pauseHot){
+    const mx=Input.mouse.x, my=Input.mouse.y;
+    const b=game.pauseHot;
+    if(mx>b.x&&mx<b.x+b.w&&my>b.y&&my<b.y+b.h){ game.state=State.PAUSE; Audio.stopBgm(); return; }
+  }
+  if([State.MENU,State.SCENE,State.BRIEF,State.OVER,State.WIN,State.PAUSE].includes(game.state)) game.handleClick();
+});
 
 let last=now(), acc=0, fpsCount=0, fpsTime=0, fps=60;
 
