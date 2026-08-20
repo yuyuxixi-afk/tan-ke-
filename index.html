@@ -5111,11 +5111,11 @@ class Game {
     const cloakCol = p.cloakOverheat>0?'#ff4655':(p.cloaked?'#8ff0ff':'#a06bff');
     const cloakLbl = p.cloakOverheat>0?('隐身过热 '+p.cloakOverheat.toFixed(1)+'s'):('隐身能量 '+Math.ceil(p.cloakEnergy)+'s');
     this.bar(g,16,44,190,8,cloakPct,cloakCol,cloakLbl);
-    // 「装甲怎么补」小字说明（只在前 4 波显示，学会了就淡出，不长期占地方）
+    // 「装甲怎么补」小字说明（只在前 4 波显示，放在顶部条内不被建筑物遮挡）
     if(this.wave<=4){
-      g.textAlign='left'; g.textBaseline='alphabetic'; g.font='9px "Microsoft YaHei"';
-      g.fillStyle='rgba(255,150,160,0.72)';
-      g.fillText('↑装甲=血量：按R维修 / 捡红色「装甲协议」+40 / 按V用背包回血', 16, 74);
+      g.textAlign='left'; g.textBaseline='middle'; g.font='8px "Microsoft YaHei"';
+      g.fillStyle='rgba(255,180,190,0.7)';
+      g.fillText('R维修·捡装甲协议+40·V背包回血', 16, 58);
     }
     // 分数 / 波次 / 击杀
     g.fillStyle='#e8f4ff'; g.font='bold 20px "Segoe UI"'; g.textAlign='center'; g.textBaseline='middle';
