@@ -5401,39 +5401,41 @@ class Game {
   //   玩家在上半场 → 提示条落到底部；玩家在下半场 → 提示条升到顶部（永远在玩家的“另一半”）。
   //   世界坐标 = 屏幕坐标（无镜头平移），所以直接用玩家 y 判断即可。
   drawCoach(g){
-    // ---- 进场玩家位置指示（聚光灯圈 + "你在这里"箭头标签，3.5秒） ----
+    // ---- 进场玩家位置指示（聚光灯圈 + "你在这里"大箭头标签，3.5秒，更醒目） ----
     if(this.newGuide.active && this.newGuide.playerSpotlight>0 && this.player && !this.player.dead){
       const p=this.player;
       const t=this.newGuide.playerSpotlight;
-      const a = clamp(t/1.0,0,1);                   // 淡出
-      const pulse = 1 + Math.sin(performance.now()/160)*0.06;   // 呼吸感
+      const a = clamp(t/1.2,0,1);                   // 淡出更慢
+      const pulse = 1 + Math.sin(performance.now()/120)*0.12;   // 呼吸感更强
       g.save();
-      // 1) 外发光圈：从坦克脚下向四周扩散的辉光圆环
-      for(let i=0;i<2;i++){
-        const rr = (80+i*24)*pulse;
-        g.globalAlpha = a * (i===0?0.55:0.28);
-        g.strokeStyle='#7df0ff'; g.lineWidth = i===0?4:2;
-        g.shadowBlur=22; g.shadowColor='#7df0ff';
+      // 1) 三层发光扩散圈（玩家脚下）
+      for(let i=0;i<3;i++){
+        const rr = (70+i*38)*pulse;
+        g.globalAlpha = a * (i===0?0.70 : i===1?0.42 : 0.22);
+        g.strokeStyle = i===0 ? '#7dff9b' : (i===1?'#7df0ff':'#a06bff');
+        g.lineWidth = i===0?5:2.5;
+        g.shadowBlur=28; g.shadowColor=g.strokeStyle;
         g.beginPath(); g.arc(p.x,p.y,rr,0,TAU); g.stroke();
       }
       g.shadowBlur=0;
-      // 2) "你在这里"文字标签：在玩家头顶右上方，带气泡
-      const bx=p.x+62, by=p.y-66;
+      // 2) "你在这里"大标签（玩家头顶，大字号高对比，带向下箭头）
+      const bx=p.x, by=p.y-92;
       g.globalAlpha=a;
-      g.fillStyle='rgba(5,15,28,0.9)';
-      this.roundRectFill(g,bx-54,by-22,116,42,10);
-      g.strokeStyle='#7df0ff'; g.lineWidth=2; g.shadowBlur=12; g.shadowColor='#7df0ff';
-      this.roundRectStroke(g,bx-54,by-22,116,42,10); g.shadowBlur=0;
-      // 指向玩家的小三角（气泡尾巴）
-      g.fillStyle='rgba(5,15,28,0.9)';
-      g.beginPath(); g.moveTo(bx-42,by+18); g.lineTo(bx-30,by+20); g.lineTo(bx-32,by+8); g.closePath(); g.fill();
-      g.strokeStyle='#7df0ff'; g.lineWidth=1.5;
-      g.beginPath(); g.moveTo(bx-42,by+18); g.lineTo(bx-30,by+20); g.lineTo(bx-32,by+8); g.closePath(); g.stroke();
+      // 框
+      g.fillStyle='rgba(0,0,0,0.92)';
+      this.roundRectFill(g,bx-78,by-28,156,54,12);
+      g.strokeStyle='#7dff9b'; g.lineWidth=3; g.shadowBlur=20; g.shadowColor='#7dff9b';
+      this.roundRectStroke(g,bx-78,by-28,156,54,12); g.shadowBlur=0;
+      // 向下大箭头（指向玩家）
+      g.fillStyle='#7dff9b';
+      g.beginPath(); g.moveTo(bx-14,by+24); g.lineTo(bx+14,by+24); g.lineTo(bx,by+42); g.closePath(); g.fill();
       // 文字
-      g.fillStyle='#7df0ff'; g.font='bold 14px "Microsoft YaHei"'; g.textAlign='center'; g.textBaseline='middle';
-      g.fillText('👆 你在这里', bx, by-8);
-      g.fillStyle='#dfeaff'; g.font='12px "Microsoft YaHei"';
-      g.fillText('这是你的坦克', bx, by+10);
+      g.fillStyle='#7dff9b'; g.font='bold 18px "Microsoft YaHei"'; g.textAlign='center'; g.textBaseline='middle';
+      g.shadowBlur=10; g.shadowColor='#7dff9b';
+      g.fillText('👤 你在这里 👤', bx, by-6);
+      g.shadowBlur=0;
+      g.fillStyle='#fff'; g.font='bold 13px "Microsoft YaHei"';
+      g.fillText('这就是你的坦克', bx, by+14);
       g.restore();
     }
     // ---- 救命提示（居中，老 coach 样式）----
@@ -5469,130 +5471,110 @@ class Game {
     const isTouch=Input && Input.touch && Input.touch.isTouch;
     const g0=this.newGuide;
     const step=g0.step;
-    // 引导文字（PC/手机两套话术）
+    // 引导文字（PC/手机两套话术，全放左侧，简洁2-3行）
     const guideText = isTouch ? [
-      // step0 移动
-      { side:'L', icon:'🎮', title:'第一步：移动', col:'#22e0ff',
-        lines:['👆 拖动左下角青色摇杆',
-               ' 坦克会往摇杆方向跑',
-               '移动时会显示青色箭头',
-               '多试试熟悉手感！'] },
-      // step1 开火+瞄准
-      { side:'R', icon:'🔥', title:'第二步：开火', col:'#ff4655',
-        lines:['👆 按右下角红色「开火」',
-               '炮塔会自动锁定最近敌人',
-               '想手动瞄准就拖右下角品红圈',
-               '一边移动一边开火更安全！'] },
-      // step2 护盾
-      { side:'L', icon:'🛡', title:'第三步：护盾保命', col:'#7dff9b',
-        lines:['👆 点左侧小「护盾」按钮',
-               '（或按 G 键）',
-               '护盾开启 5 秒完全无敌',
-               '被围住/血少时一定用它！'] },
-      // step3 换武器
-      { side:'R', icon:'🔫', title:'第四步：换武器', col:'#ffd76a',
-        lines:['👆 点左侧小「换武」按钮',
-               '（或按 B 键/滚轮切换）',
+      // 全部 side:L（全放左侧）
+      { icon:'🎮', title:'① 移动', col:'#22e0ff',
+        lines:['👉 拖左下角青色摇杆',
+               '坦克往摇杆方向移动',
+               '试着左右移动～'] },
+      { icon:'🔥', title:'② 开火', col:'#ff4655',
+        lines:['👉 按右下角红色「开火」',
+               '炮塔自动锁定最近敌人',
+               '拖品红圈可手动瞄准'] },
+      { icon:'🛡', title:'③ 护盾保命', col:'#7dff9b',
+        lines:['👉 点右侧小「护盾」按钮',
+               '开盾 5 秒内完全无敌',
+               '被围住一定要用！'] },
+      { icon:'🔫', title:'④ 换武器', col:'#ffd76a',
+        lines:['👉 点右侧小「换武」按钮',
                '不同武器打不同敌人',
-               '穿甲打重甲，散射打成群！'] },
-      // step4 维修
-      { side:'L', icon:'🔧', title:'第五步：维修回血', col:'#ff9b45',
-        lines:['👆 点左侧「维修」按钮',
-               '（或按 R 键）',
+               '穿甲打重甲，散射打成群'] },
+      { icon:'🔧', title:'⑤ 维修回血', col:'#ff9b45',
+        lines:['👉 点右侧「维修」按钮',
                '装甲条就是你的血量',
-               '随时修一下更耐打！'] },
-      // step5 目标
-      { side:'R', icon:'🎯', title:'最后：赢下这波', col:'#ff3d8b',
-        lines:['目标：击败第 1 波全部敌人',
+               '随时修，别等血见底！'] },
+      { icon:'🎯', title:'⑥ 赢下这波', col:'#ff3d8b',
+        lines:['目标：击败第 1 波敌人',
                '敌人会从上方出现',
-               '掉的 ❤装甲协议 会回血',
-               '打完这波你就出师啦！'] },
-      // step6 完成
-      { side:'L', icon:'✨', title:'教学完成', col:'#a06bff',
-        lines:['你已经会基本操作啦！',
-               '继续战斗解锁更强型号',
-               '按 T 换更猛的坦克',
-               '有问题随时按 Esc 暂停'] },
+               '打倒掉❤，可以回血'] },
+      { icon:'✨', title:'⑦ 教学完成', col:'#a06bff',
+        lines:['恭喜，基础操作都会啦！',
+               '继续战斗解锁更猛坦克',
+               '按 Esc 随时暂停'] },
     ] : [
-      // PC 话术
-      { side:'L', icon:'🎮', title:'第一步：移动', col:'#22e0ff',
-        lines:['按 WASD 或 方向键',
+      // PC 话术（全放左侧，简洁2-3行）
+      { icon:'🎮', title:'① 移动', col:'#22e0ff',
+        lines:['👉 按 WASD 或 方向键',
                '坦克会往对应方向开',
-               '移动时显示青色箭头',
-               '先多试试手感！'] },
-      { side:'R', icon:'🔥', title:'第二步：瞄准+开火', col:'#ff4655',
-        lines:['鼠标指向哪里就瞄准哪',
-               '按鼠标左键或空格开火',
-               '炮塔会对准鼠标方向',
-               '一边移动一边打更安全！'] },
-      { side:'L', icon:'🛡', title:'第三步：G 护盾保命', col:'#7dff9b',
-        lines:['按 G 键开启护盾',
+               '先左右走走熟悉一下'] },
+      { icon:'🔥', title:'② 瞄准+开火', col:'#ff4655',
+        lines:['👉 鼠标指向 = 瞄准方向',
+               '鼠标左键 / 空格 开火',
+               '边移动边打更安全！'] },
+      { icon:'🛡', title:'③ G 护盾保命', col:'#7dff9b',
+        lines:['👉 按 G 键开护盾',
                '5 秒内完全无敌',
-               '被围住/血少必用它',
-               '别等到血见底才按！'] },
-      { side:'R', icon:'🔫', title:'第四步：B 换武器', col:'#ffd76a',
-        lines:['按 B 键或鼠标滚轮',
+               '被围住一定要用！'] },
+      { icon:'🔫', title:'④ B 换武器', col:'#ffd76a',
+        lines:['👉 按 B 键 / 鼠标滚轮',
                '不同武器打不同敌人',
-               '穿甲打重甲，散射打成群',
-               '激光/电磁炮打 Boss！'] },
-      { side:'L', icon:'🔧', title:'第五步：R 维修回血', col:'#ff9b45',
-        lines:['按 R 键修复装甲',
+               '穿甲打重甲，散射打成群'] },
+      { icon:'🔧', title:'⑤ R 维修回血', col:'#ff9b45',
+        lines:['👉 按 R 键修复装甲',
                '装甲条就是你的血量',
-               '打得差不多修一修',
-               '别等见底才想到修！'] },
-      { side:'R', icon:'🎯', title:'最后：赢下这波', col:'#ff3d8b',
-        lines:['目标：击败第 1 波全部敌人',
-               '敌人会从上方出现',
-               '掉的 ❤装甲协议 会回血',
-               '打完这波你就出师啦！'] },
-      { side:'L', icon:'✨', title:'教学完成', col:'#a06bff',
-        lines:['你已经会基本操作啦！',
-               '继续战斗解锁更强型号',
-               '按 T 换更猛的坦克',
-               '有问题随时按 Esc 暂停'] },
+               '随时修，别等见底！'] },
+      { icon:'🎯', title:'⑥ 赢下这波', col:'#ff3d8b',
+        lines:['目标：击败第 1 波敌人',
+               '敌人从上方出现',
+               '掉的❤装甲协议可以回血'] },
+      { icon:'✨', title:'⑦ 教学完成', col:'#a06bff',
+        lines:['恭喜，基础操作都会啦！',
+               '继续战斗解锁更猛坦克',
+               'Esc 随时暂停'] },
     ];
     const info = guideText[Math.min(step, guideText.length-1)];
     if(!info) return;
     const col = info.col;
     const life = g0.life, max = g0.maxLife;
     const a = clamp(life/1.0,0,1) * clamp((max-life)/0.8+0.001,0,1);
-    // 尺寸
-    const panelW=260, panelH=160;
-    const topY = HUD_TOP + 80;          // 在 HUD 下方（y≥66），避开顶部条
-    // step0 移动：放在左侧；step1 开火：放在右侧
-    const px = info.side==='L' ? 16 : W - panelW - 16;
+    // 尺寸（变矮，因为话术从4行缩成3行）
+    const panelW=270, panelH=140;
+    const topY = HUD_TOP + 82;          // 在 HUD 下方（y≥66），避开顶部条
+    // 全放左侧
+    const px = 16;
     const py = topY;
     g.save();
-    g.globalAlpha = 0.92;
+    g.globalAlpha = 0.94;
     // 背景板
-    g.fillStyle='rgba(5,10,20,0.82)';
+    g.fillStyle='rgba(5,10,20,0.86)';
     this.roundRectFill(g,px,py,panelW,panelH,14);
-    g.strokeStyle=col; g.lineWidth=2.5; g.shadowBlur=18; g.shadowColor=col;
+    g.strokeStyle=col; g.lineWidth=2.5; g.shadowBlur=22; g.shadowColor=col;
     this.roundRectStroke(g,px,py,panelW,panelH,14);
     g.shadowBlur=0;
-    // 步骤角标
-    g.fillStyle=col; g.font='bold 11px "Microsoft YaHei"'; g.textAlign=(info.side==='L'?'left':'right'); g.textBaseline='top';
-    g.fillText((info.side==='L'?'◆ ':(' ◆'))+'步骤 '+(Math.min(step,6)+1)+' / 7', info.side==='L'?(px+12):(px+panelW-12), py+10);
-    // 标题
-    g.fillStyle='#fff'; g.font='bold 20px "Microsoft YaHei"'; g.textAlign='center';
-    g.fillText(info.icon+'  '+info.title, px+panelW/2, py+38);
+    // 步骤角标（左上角，高亮显示）
+    g.fillStyle=col; g.font='bold 11px "Microsoft YaHei"'; g.textAlign='left'; g.textBaseline='top';
+    g.fillText('◆ 步骤 '+(Math.min(step,6)+1)+' / 7', px+12, py+10);
+    // 标题（居中，加大加粗）
+    g.fillStyle='#fff'; g.font='bold 22px "Microsoft YaHei"'; g.textAlign='center';
+    g.fillText(info.icon+'  '+info.title, px+panelW/2, py+40);
     // 分隔线
-    g.strokeStyle=col; g.lineWidth=1; g.globalAlpha=0.7;
-    g.beginPath(); g.moveTo(px+20, py+54); g.lineTo(px+panelW-20, py+54); g.stroke();
-    g.globalAlpha=0.92;
-    // 文字行（每一行紧凑）
-    g.font='13px "Microsoft YaHei"'; g.textAlign='left';
-    g.fillStyle='#dfeaff';
-    const startX=px+20, lineH=24, startY=py+68;
+    g.strokeStyle=col; g.lineWidth=1.5; g.globalAlpha=0.8;
+    g.beginPath(); g.moveTo(px+18, py+58); g.lineTo(px+panelW-18, py+58); g.stroke();
+    g.globalAlpha=0.94;
+    // 文字行（每一行，紧凑）
+    g.font='bold 14px "Microsoft YaHei"'; g.textAlign='left';
+    g.fillStyle='#f2fbff';
+    const startX=px+20, lineH=22, startY=py+76;
     for(let i=0;i<info.lines.length;i++){
       g.fillText(info.lines[i], startX, startY + i*lineH);
     }
-    // 进度条（life 倒计时）
+    // 进度条（倒计时）
     const pct = clamp(life/max,0,1);
     g.fillStyle='rgba(255,255,255,0.08)';
-    this.roundRectFill(g,px+16,py+panelH-14,panelW-32,4,2);
+    this.roundRectFill(g,px+14,py+panelH-12,panelW-28,5,2);
     g.fillStyle=col;
-    this.roundRectFill(g,px+16,py+panelH-14,(panelW-32)*pct,4,2);
+    this.roundRectFill(g,px+14,py+panelH-12,(panelW-28)*pct,5,2);
     g.restore();
   }
   drawCountdown(g){
