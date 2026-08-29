@@ -3575,7 +3575,6 @@ class Game {
     if(g.playerSpotlight>0) g.playerSpotlight -= dt;
     // 倒计时
     if(g.life>0) g.life -= dt;
-    const p=this.player; if(!p) return;
     const Input=window.Input;
     const isTouch=Input && Input.touch && Input.touch.isTouch;
 
