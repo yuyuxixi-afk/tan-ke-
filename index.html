@@ -3042,7 +3042,8 @@ class Game {
     //   step 0=移动 → step 1=瞄准开火 → step 2=护盾/G键 → step 3=背包/V键 → step 4=换型/T键 → step 5=目标/击败敌人 → step 6=完成
     this.newGuide={
       step:0, life:0, maxLife:0,
-      active:false,       // 本关是否开启引导（闯关第1场才开）
+      active:false,
+      playerSpotlight:0,      // 进场玩家位置聚光灯倒计时（秒）
     };
     // 引导进度按键标记
     this._gPressed=false; this._rPressed=false; this._bPressed=false; this._vPressed=false; this._tPressed=false;
@@ -3087,12 +3088,12 @@ class Game {
     this.modelScanFx=0;                            // 大型坦克进场“识别协议”扫描线计时
     this.player=new PlayerTank(WORLD/2, WORLD-120);
     this.state=State.PLAY;
-    // ---- 新手分步引导：闯关模式才开启 ----
-    const isFirst = (this.mode==='campaign');
-    this.newGuide.active = isFirst;
+    // ---- 新手分步引导：所有模式都开启（闯关+无限） ----
+    this.newGuide.active = true;
     this.newGuide.step = 0;
-    this.newGuide.life = 24;          // 第一步停留24秒（足够慢慢试）
-    this.newGuide.maxLife = 24;
+    this.newGuide.life = 26;          // 第一步停留26秒
+    this.newGuide.maxLife = 26;
+    this.newGuide.playerSpotlight = 3.5;   // 进场时玩家位置聚光灯（秒）
     // 重置按键标记
     this._gPressed=false; this._rPressed=false; this._bPressed=false; this._vPressed=false; this._tPressed=false;
     this.coach={ msg:'', sub:'', color:'#7df0ff', life:0, key:'', cd:{} }; this.coachGlobalCd=0;
@@ -3567,9 +3568,11 @@ class Game {
           '💥 被围住了？按 X 放 EMP 清场', '教官：X 清空敌方子弹并重创全体敌人','#ffd76a')) return;
     }
 
-    // —— 分步新手引导（仅闯关模式首局开启）——
+    // —— 分步新手引导（所有模式首局开启）——
     if(!this.newGuide.active) return;
     const g=this.newGuide;
+    // 玩家位置聚光灯衰减
+    if(g.playerSpotlight>0) g.playerSpotlight -= dt;
     // 倒计时
     if(g.life>0) g.life -= dt;
     const p=this.player; if(!p) return;
@@ -5398,6 +5401,41 @@ class Game {
   //   玩家在上半场 → 提示条落到底部；玩家在下半场 → 提示条升到顶部（永远在玩家的“另一半”）。
   //   世界坐标 = 屏幕坐标（无镜头平移），所以直接用玩家 y 判断即可。
   drawCoach(g){
+    // ---- 进场玩家位置指示（聚光灯圈 + "你在这里"箭头标签，3.5秒） ----
+    if(this.newGuide.active && this.newGuide.playerSpotlight>0 && this.player && !this.player.dead){
+      const p=this.player;
+      const t=this.newGuide.playerSpotlight;
+      const a = clamp(t/1.0,0,1);                   // 淡出
+      const pulse = 1 + Math.sin(performance.now()/160)*0.06;   // 呼吸感
+      g.save();
+      // 1) 外发光圈：从坦克脚下向四周扩散的辉光圆环
+      for(let i=0;i<2;i++){
+        const rr = (80+i*24)*pulse;
+        g.globalAlpha = a * (i===0?0.55:0.28);
+        g.strokeStyle='#7df0ff'; g.lineWidth = i===0?4:2;
+        g.shadowBlur=22; g.shadowColor='#7df0ff';
+        g.beginPath(); g.arc(p.x,p.y,rr,0,TAU); g.stroke();
+      }
+      g.shadowBlur=0;
+      // 2) "你在这里"文字标签：在玩家头顶右上方，带气泡
+      const bx=p.x+62, by=p.y-66;
+      g.globalAlpha=a;
+      g.fillStyle='rgba(5,15,28,0.9)';
+      this.roundRectFill(g,bx-54,by-22,116,42,10);
+      g.strokeStyle='#7df0ff'; g.lineWidth=2; g.shadowBlur=12; g.shadowColor='#7df0ff';
+      this.roundRectStroke(g,bx-54,by-22,116,42,10); g.shadowBlur=0;
+      // 指向玩家的小三角（气泡尾巴）
+      g.fillStyle='rgba(5,15,28,0.9)';
+      g.beginPath(); g.moveTo(bx-42,by+18); g.lineTo(bx-30,by+20); g.lineTo(bx-32,by+8); g.closePath(); g.fill();
+      g.strokeStyle='#7df0ff'; g.lineWidth=1.5;
+      g.beginPath(); g.moveTo(bx-42,by+18); g.lineTo(bx-30,by+20); g.lineTo(bx-32,by+8); g.closePath(); g.stroke();
+      // 文字
+      g.fillStyle='#7df0ff'; g.font='bold 14px "Microsoft YaHei"'; g.textAlign='center'; g.textBaseline='middle';
+      g.fillText('👆 你在这里', bx, by-8);
+      g.fillStyle='#dfeaff'; g.font='12px "Microsoft YaHei"';
+      g.fillText('这是你的坦克', bx, by+10);
+      g.restore();
+    }
     // ---- 救命提示（居中，老 coach 样式）----
     const c=this.coach; if(c && c.life>0 && c.msg){
       const a=clamp(c.life/0.6,0,1) * clamp((4.2-c.life)/0.25+0.001,0,1);
